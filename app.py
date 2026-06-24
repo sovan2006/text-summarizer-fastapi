@@ -16,9 +16,10 @@ app = FastAPI(
 )
 
 #model&tokenizer
-tokenizer = T5Tokenizer.from_pretrained("./t5-small-samsum")
-model = T5ForConditionalGeneration.from_pretrained("./t5-small-samsum")
+MODEL_NAME = "sovan2006/text-summarizer-model"
 
+tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
+model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 #device
 if torch.backends.mps.is_available():
     device = torch.device("mps")
