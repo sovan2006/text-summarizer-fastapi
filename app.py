@@ -1,14 +1,11 @@
-#fastapi
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import T5Tokenizer, T5ForConditionalGeneration
+from fastapi.responses import FileResponse
 import torch
 import re
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 
-#initialize the FastAPI app
+# Initialize FastAPI app
 app = FastAPI(
     title="TEXT SUMMARIZER APP",
     description="This is a text summarizer app that uses the T5 model to summarize text.",
@@ -16,39 +13,35 @@ app = FastAPI(
 )
 
 #model&tokenizer
-MODEL_NAME = "./Text_Summarization"
+MODEL_NAME = "sovan2006/text-summarizer-model"
 
 tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
 model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
-#device
-if torch.backends.mps.is_available():
-    device = torch.device("mps")
-elif torch.cuda.is_available():
+
+# Device setup
+if torch.cuda.is_available():
     device = torch.device("cuda")
 else:
     device = torch.device("cpu")
 
-
 model.to(device)
 
-#template
-templates = Jinja2Templates(directory=".")
-
-#import model schema
+# Input schema
 class DialogueInput(BaseModel):
     dialogue: str
-    
-    
-    
+
+
+# Text cleaning function
 def clean_data(text):
-    text = re.sub(r"\r\n", " ", text) #lines
-    text = re.sub(r"\s+", " ", text) #extra spaces
-    text = re.sub(r"<.*?>", " ", text) # html tags
-    text = text.strip().lower() #strip and lower
+    text = re.sub(r"\r\n", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"<.*?>", " ", text)
+    text = text.strip().lower()
     return text
 
 
-def summarize_dialogue(dialogue : str) -> str:
+# Summarization function
+def summarize_dialogue(dialogue: str) -> str:
     dialogue = clean_data(dialogue)
 
     inputs = tokenizer(
@@ -61,7 +54,6 @@ def summarize_dialogue(dialogue : str) -> str:
 
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
-    model.to(device)
     model.eval()
 
     with torch.no_grad():
@@ -79,7 +71,15 @@ def summarize_dialogue(dialogue : str) -> str:
     )
 
     return summary
-#API endpoint
+
+
+# Home page
+@app.get("/")
+async def home():
+    return FileResponse("index.html")
+
+
+# API endpoint
 @app.post("/summarize/")
 async def create_item(dialogue_input: DialogueInput):
     try:
@@ -89,8 +89,6 @@ async def create_item(dialogue_input: DialogueInput):
         print("ERROR:", e)
         return {"summary": str(e)}
 
-from fastapi.responses import FileResponse
-
-@app.get("/")
-async def home():
-    return FileResponse("index.html")
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
