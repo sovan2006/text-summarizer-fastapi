@@ -8,12 +8,12 @@ import re
 # Initialize FastAPI app
 app = FastAPI(
     title="TEXT SUMMARIZER APP",
-    description="This is a text summarizer app that uses the T5 model to summarize text.",
+    description="Text Summarization using T5 Model",
     version="1.0.0",
 )
 
-#model&tokenizer
-MODEL_NAME = "sovan2006/text-summarizer-model"
+# Load model from local folder
+MODEL_NAME = "./Text_Summarization"
 
 tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
 model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
@@ -31,7 +31,7 @@ class DialogueInput(BaseModel):
     dialogue: str
 
 
-# Text cleaning function
+# Clean text
 def clean_data(text):
     text = re.sub(r"\r\n", " ", text)
     text = re.sub(r"\s+", " ", text)
@@ -73,22 +73,25 @@ def summarize_dialogue(dialogue: str) -> str:
     return summary
 
 
-# Home page
+# Home Page
 @app.get("/")
 async def home():
     return FileResponse("index.html")
 
 
-# API endpoint
+# Summarization API
 @app.post("/summarize/")
 async def create_item(dialogue_input: DialogueInput):
     try:
         summary = summarize_dialogue(dialogue_input.dialogue)
         return {"summary": summary}
     except Exception as e:
-        print("ERROR:", e)
-        return {"summary": str(e)}
+    import traceback
+    traceback.print_exc()
+    return {"error": str(e)}
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+
+# Health Check
+@app.get("/health")
+async def health():
+    return {"status": "running"}
