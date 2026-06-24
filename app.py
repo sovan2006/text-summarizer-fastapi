@@ -4,34 +4,50 @@ from transformers import T5Tokenizer, T5ForConditionalGeneration
 from fastapi.responses import FileResponse
 import torch
 import re
+import traceback
 
-# Initialize FastAPI app
+# =====================================
+# FastAPI App
+# =====================================
+
 app = FastAPI(
     title="TEXT SUMMARIZER APP",
-    description="Text Summarization using T5 Model",
-    version="1.0.0",
+    description="Dialogue Summarization using Fine-Tuned T5 Model",
+    version="1.0.0"
 )
 
-# Load model from local folder
+# =====================================
+# Load Model
+# =====================================
+
 MODEL_NAME = "./Text_Summarization"
 
+print("Loading tokenizer...")
 tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
+
+print("Loading model...")
 model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
 
-# Device setup
-if torch.cuda.is_available():
-    device = torch.device("cuda")
-else:
-    device = torch.device("cpu")
+# =====================================
+# Device
+# =====================================
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
-# Input schema
+print(f"Model loaded on {device}")
+
+# =====================================
+# Input Schema
+# =====================================
+
 class DialogueInput(BaseModel):
     dialogue: str
 
+# =====================================
+# Text Cleaning
+# =====================================
 
-# Clean text
 def clean_data(text):
     text = re.sub(r"\r\n", " ", text)
     text = re.sub(r"\s+", " ", text)
@@ -39,24 +55,33 @@ def clean_data(text):
     text = text.strip().lower()
     return text
 
+# =====================================
+# Summarization Function
+# =====================================
 
-# Summarization function
-def summarize_dialogue(dialogue: str) -> str:
+def summarize_dialogue(dialogue):
+
     dialogue = clean_data(dialogue)
 
+    input_text = "summarize: " + dialogue
+
     inputs = tokenizer(
-        dialogue,
-        padding="max_length",
-        truncation=True,
+        input_text,
         max_length=512,
+        truncation=True,
+        padding="max_length",
         return_tensors="pt"
     )
 
-    inputs = {k: v.to(device) for k, v in inputs.items()}
+    inputs = {
+        k: v.to(device)
+        for k, v in inputs.items()
+    }
 
     model.eval()
 
     with torch.no_grad():
+
         output_ids = model.generate(
             input_ids=inputs["input_ids"],
             attention_mask=inputs["attention_mask"],
@@ -72,26 +97,96 @@ def summarize_dialogue(dialogue: str) -> str:
 
     return summary
 
-
+# =====================================
 # Home Page
+# =====================================
+
 @app.get("/")
 async def home():
     return FileResponse("index.html")
 
-
-# Summarization API
-@app.post("/summarize/")
-async def create_item(dialogue_input: DialogueInput):
-    try:
-        summary = summarize_dialogue(dialogue_input.dialogue)
-        return {"summary": summary}
-    except Exception as e:
-    import traceback
-    traceback.print_exc()
-    return {"error": str(e)}
-
-
+# =====================================
 # Health Check
+# =====================================
+
 @app.get("/health")
 async def health():
-    return {"status": "running"}
+    return {
+        "status": "running",
+        "device": str(device)
+    }
+
+# =====================================
+# Test Model Endpoint
+# =====================================
+
+@app.get("/test-model")
+async def test_model():
+
+    try:
+
+        test_text = (
+            "summarize: John and Sarah confirmed "
+            "a meeting tomorrow morning."
+        )
+
+        inputs = tokenizer(
+            test_text,
+            return_tensors="pt",
+            truncation=True,
+            max_length=512
+        )
+
+        inputs = {
+            k: v.to(device)
+            for k, v in inputs.items()
+        }
+
+        with torch.no_grad():
+
+            outputs = model.generate(
+                **inputs,
+                max_length=50
+            )
+
+        summary = tokenizer.decode(
+            outputs[0],
+            skip_special_tokens=True
+        )
+
+        return {
+            "summary": summary
+        }
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        return {
+            "error": str(e)
+        }
+
+# =====================================
+# Summarization API
+# =====================================
+
+@app.post("/summarize/")
+async def summarize(dialogue_input: DialogueInput):
+
+    try:
+
+        summary = summarize_dialogue(
+            dialogue_input.dialogue
+        )
+
+        return {
+            "summary": summary
+        }
+
+    except Exception as e:
+
+        traceback.print_exc()
+
+        return {
+            "error": str(e)
+        }
