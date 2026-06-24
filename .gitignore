@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+
+# Mac
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# Training checkpoints
+results/checkpoint-*/
+checkpoint-*/
+
+# Training artifacts
+*.pt
+optimizer.pt
+scheduler.pt
+rng_state.pth
+training_args.bin
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# Models
+results/
+*.safetensors
+*.pt
+*.pth
+*.bin
+
+# Datasets
+*.csv
+
+# Notebook
+*.ipynb
+
+.vscode/
