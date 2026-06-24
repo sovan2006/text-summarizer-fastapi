@@ -122,30 +122,22 @@ async def health():
 
 @app.get("/test-model")
 async def test_model():
-
     try:
-
-        test_text = (
-            "summarize: John and Sarah confirmed "
-            "a meeting tomorrow morning."
-        )
+        text = "summarize: John and Sarah have a meeting tomorrow."
 
         inputs = tokenizer(
-            test_text,
+            text,
             return_tensors="pt",
             truncation=True,
             max_length=512
         )
 
-        inputs = {
-            k: v.to(device)
-            for k, v in inputs.items()
-        }
+        inputs = {k: v.to(device) for k, v in inputs.items()}
 
         with torch.no_grad():
-
             outputs = model.generate(
-                **inputs,
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs["attention_mask"],
                 max_length=50
             )
 
@@ -154,17 +146,12 @@ async def test_model():
             skip_special_tokens=True
         )
 
-        return {
-            "summary": summary
-        }
+        return {"summary": summary}
 
     except Exception as e:
-
+        import traceback
         traceback.print_exc()
-
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
 
 # =====================================
 # Summarization API
