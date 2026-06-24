@@ -16,7 +16,7 @@ app = FastAPI(
 )
 
 #model&tokenizer
-MODEL_NAME = "sovan2006/text-summarizer-model"
+MODEL_NAME = "./Text_Summarization"
 
 tokenizer = T5Tokenizer.from_pretrained(MODEL_NAME)
 model = T5ForConditionalGeneration.from_pretrained(MODEL_NAME)
