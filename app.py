@@ -89,6 +89,8 @@ async def create_item(dialogue_input: DialogueInput):
         print("ERROR:", e)
         return {"summary": str(e)}
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+from fastapi.responses import FileResponse
+
+@app.get("/")
+async def home():
+    return FileResponse("index.html")
